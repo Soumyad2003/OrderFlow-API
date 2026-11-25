@@ -1,0 +1,1855 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "E-Commerce API",
+    "version": "1.0.0",
+    "description": "RESTful E-Commerce API built with Express.js, MongoDB, and Mongoose featuring JWT authentication, product management with image uploads, ratings, shopping cart, transactional orders, and polymorphic likes.",
+    "contact": {
+      "name": "Soumyadeep"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3200",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Users",
+      "description": "User registration, authentication, password management, and profile endpoints"
+    },
+    {
+      "name": "Products",
+      "description": "Product catalog, filtering, pricing analytics, image upload, and ratings"
+    },
+    {
+      "name": "Cart",
+      "description": "Authenticated user shopping cart management"
+    },
+    {
+      "name": "Orders",
+      "description": "Order placement and order history for authenticated users"
+    },
+    {
+      "name": "Likes",
+      "description": "Like/unlike products and categories"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token obtained from POST /api/users/signin (without the 'Bearer ' prefix in Swagger UI)."
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid credentials"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional list of validation error messages"
+          }
+        },
+        "required": ["success", "message"]
+      },
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane.doe@example.com"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Customer", "Seller"],
+            "example": "Customer"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane.doe@example.com"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Customer", "Seller"],
+            "example": "Customer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-15T10:30:00.000Z"
+          }
+        }
+      },
+      "SignUpRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane.doe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 50,
+            "example": "StrongPass123!"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Customer", "Seller"],
+            "default": "Customer",
+            "example": "Customer"
+          }
+        }
+      },
+      "SignInRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane.doe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "StrongPass123!"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": ["newPassword"],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "example": "StrongPass123!"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 50,
+            "example": "NewStrongPass456!"
+          }
+        }
+      },
+      "CategoryRef": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d2"
+          },
+          "name": {
+            "type": "string",
+            "example": "Footwear"
+          }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d5"
+          },
+          "product": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "_id": {
+                    "type": "string",
+                    "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Jane Doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "jane.doe@example.com"
+                  }
+                }
+              }
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+          },
+          "name": {
+            "type": "string",
+            "example": "Classic Running Shoes"
+          },
+          "description": {
+            "type": "string",
+            "example": "Lightweight cushioned running shoes for daily training."
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "example": 89.99
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "1710000000000-shoes.jpg"
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["8", "9", "10", "11"]
+          },
+          "inStock": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 25
+          },
+          "category": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/CategoryRef"
+                }
+              ]
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/Review"
+                }
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProductUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Classic Running Shoes v2"
+          },
+          "description": {
+            "type": "string",
+            "example": "Updated mesh upper for improved breathability."
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "example": 94.99
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "1710000000000-shoes-v2.jpg"
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["8", "9", "10", "11", "12"]
+          },
+          "inStock": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 40
+          },
+          "category": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["65f1a2b3c4d5e6f7a8b9c0d2"]
+          }
+        }
+      },
+      "RateProductRequest": {
+        "type": "object",
+        "required": ["productID", "rating"],
+        "properties": {
+          "productID": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          }
+        }
+      },
+      "AveragePriceByCategory": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Category name",
+            "example": "Footwear"
+          },
+          "averagePrice": {
+            "type": "number",
+            "example": 84.5
+          },
+          "count": {
+            "type": "integer",
+            "example": 12
+          }
+        }
+      },
+      "CartItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d4"
+          },
+          "productID": {
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+              },
+              {
+                "$ref": "#/components/schemas/Product"
+              }
+            ]
+          },
+          "userID": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 2
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AddToCartRequest": {
+        "type": "object",
+        "required": ["productID"],
+        "properties": {
+          "productID": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "example": 2
+          }
+        }
+      },
+      "UpdateCartQuantityRequest": {
+        "type": "object",
+        "required": ["quantity"],
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 3
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d8"
+          },
+          "product": {
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "_id": {
+                    "type": "string",
+                    "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Classic Running Shoes"
+                  },
+                  "price": {
+                    "type": "number",
+                    "example": 89.99
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "example": "1710000000000-shoes.jpg"
+                  }
+                }
+              }
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 2
+          },
+          "price": {
+            "type": "number",
+            "example": 89.99
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d6"
+          },
+          "user": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "totalAmount": {
+            "type": "number",
+            "minimum": 0,
+            "example": 179.98
+          },
+          "status": {
+            "type": "string",
+            "enum": ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+            "default": "Pending",
+            "example": "Pending"
+          },
+          "shippingAddress": {
+            "type": "object",
+            "properties": {
+              "street": {
+                "type": "string",
+                "example": "123 Main St"
+              },
+              "city": {
+                "type": "string",
+                "example": "Bengaluru"
+              },
+              "state": {
+                "type": "string",
+                "example": "KA"
+              },
+              "zipCode": {
+                "type": "string",
+                "example": "560001"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ToggleLikeRequest": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ObjectId of the Product or Category to like/unlike",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Product", "Category"],
+            "example": "Product"
+          }
+        }
+      },
+      "Like": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d7"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "_id": {
+                "type": "string",
+                "example": "65f1a2b3c4d5e6f7a8b9c0d1"
+              },
+              "name": {
+                "type": "string",
+                "example": "Jane Doe"
+              },
+              "email": {
+                "type": "string",
+                "example": "jane.doe@example.com"
+              }
+            }
+          },
+          "likeable": {
+            "type": "string",
+            "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+          },
+          "on_model": {
+            "type": "string",
+            "enum": ["Product", "Category"],
+            "example": "Product"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Authentication token is missing, invalid, or expired",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Unauthorized"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Requested resource was not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Resource not found"
+            }
+          }
+        }
+      },
+      "BadRequestError": {
+        "description": "Invalid request parameters or body",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Validation error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/users/signup": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Register a new user",
+        "description": "Creates a new Customer or Seller account with a bcrypt-hashed password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User registered successfully"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/UserSummary"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "409": {
+            "description": "Email already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "email already exists"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/signin": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Login and get JWT token",
+        "description": "Authenticates a user by email and password and returns a signed JWT valid for 24 hours.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Login successful"
+                    },
+                    "token": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/UserSummary"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Invalid credentials"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/resetpassword": {
+      "put": {
+        "tags": ["Users"],
+        "summary": "Reset user password",
+        "description": "Updates the authenticated user's password.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Password updated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/users/profile": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user profile",
+        "description": "Retrieves the currently authenticated user's profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/UserProfile"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get all products",
+        "description": "Returns all products sorted by newest first with populated category names.",
+        "responses": {
+          "200": {
+            "description": "List of products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 2
+                    },
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Add a new product",
+        "description": "Creates a new product with an optional uploaded image (`multipart/form-data`). Comma-separated strings are accepted for `category` (Category ObjectIds) and `sizes`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "price"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Classic Running Shoes"
+                  },
+                  "price": {
+                    "type": "number",
+                    "example": 89.99
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Lightweight cushioned running shoes for daily training."
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Comma-separated Category ObjectIds",
+                    "example": "65f1a2b3c4d5e6f7a8b9c0d2"
+                  },
+                  "sizes": {
+                    "type": "string",
+                    "description": "Comma-separated product sizes",
+                    "example": "8,9,10,11"
+                  },
+                  "inStock": {
+                    "type": "integer",
+                    "example": 25
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Product image file (max 5MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Product created"
+                    },
+                    "product": {
+                      "$ref": "#/components/schemas/Product"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/products/filter": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Filter products by price or category",
+        "description": "Filters products by optional minimum price, maximum price, and category ID(s).",
+        "parameters": [
+          {
+            "name": "minPrice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "example": 20
+            },
+            "description": "Minimum product price"
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "example": 150
+            },
+            "description": "Maximum product price"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d2"
+            },
+            "description": "Category ObjectId (repeat parameter for multiple categories)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filtered products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/averageprice": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get average price by category",
+        "description": "Aggregates product prices to compute the average price and product count per category, sorted descending by average price.",
+        "responses": {
+          "200": {
+            "description": "Average prices per category",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AveragePriceByCategory"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get single product",
+        "description": "Fetches a single product by its ID with populated categories and reviews.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+            },
+            "description": "Product ObjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "product": {
+                      "$ref": "#/components/schemas/Product"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Products"],
+        "summary": "Update product",
+        "description": "Updates fields on an existing product by its ID.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+            },
+            "description": "Product ObjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Product updated"
+                    },
+                    "product": {
+                      "$ref": "#/components/schemas/Product"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Delete product",
+        "description": "Deletes a product and cleans up its associated reviews and category references.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+            },
+            "description": "Product ObjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Product deleted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/products/rate": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Rate a product",
+        "description": "Creates or updates the authenticated user's rating (1 to 5) for a product.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rating saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Rating saved"
+                    },
+                    "review": {
+                      "$ref": "#/components/schemas/Review"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/cartItems": {
+      "get": {
+        "tags": ["Cart"],
+        "summary": "Get cart items",
+        "description": "Retrieves all items in the authenticated user's shopping cart.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cart items retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CartItem"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Cart"],
+        "summary": "Add item to cart",
+        "description": "Adds a product to the authenticated user's cart or increments its quantity if it already exists.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddToCartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Item added to cart",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Item added to cart"
+                    },
+                    "cartItem": {
+                      "$ref": "#/components/schemas/CartItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/cartItems/{id}": {
+      "put": {
+        "tags": ["Cart"],
+        "summary": "Update cart item quantity",
+        "description": "Updates the quantity of a specific cart item belonging to the authenticated user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d4"
+            },
+            "description": "Cart item ObjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCartQuantityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cart item updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Cart item updated"
+                    },
+                    "item": {
+                      "$ref": "#/components/schemas/CartItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Cart"],
+        "summary": "Remove item from cart",
+        "description": "Deletes a specific cart item belonging to the authenticated user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d4"
+            },
+            "description": "Cart item ObjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removed from cart",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Item removed from cart"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Place an order",
+        "description": "Places a new order inside a MongoDB transaction from all items currently in the authenticated user's cart, then clears the cart.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Order placed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Order placed successfully"
+                    },
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cart is empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Cart is empty"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get user orders",
+        "description": "Retrieves all orders placed by the authenticated user sorted by newest first.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Order"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get order by ID",
+        "description": "Retrieves a specific order belonging to the authenticated user by its ID.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d6"
+            },
+            "description": "Order ObjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/likes/toggle": {
+      "post": {
+        "tags": ["Likes"],
+        "summary": "Toggle like on a product or category",
+        "description": "Likes the target Product or Category if not yet liked by the user, or removes the like if already liked.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleLikeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Like toggled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "liked": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Liked successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/likes": {
+      "get": {
+        "tags": ["Likes"],
+        "summary": "Get likes for a product or category",
+        "description": "Returns all likes for a given Product or Category ID (protected by JWT middleware on the /api/likes router).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d3"
+            },
+            "description": "ObjectId of the Product or Category"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["Product", "Category"],
+              "example": "Product"
+            },
+            "description": "Entity type ('Product' or 'Category')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Likes retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "likes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Like"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/likes/{id}": {
+      "delete": {
+        "tags": ["Likes"],
+        "summary": "Unlike by like ID",
+        "description": "Removes a specific like record belonging to the authenticated user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "65f1a2b3c4d5e6f7a8b9c0d7"
+            },
+            "description": "Like ObjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unliked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Unliked successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    }
+  }
+}
